@@ -1,0 +1,6 @@
+games.json
+.vscode/
+*.pyc
+*.ui~
+*.ui#
+*.cmb

@@ -1,0 +1,1 @@
+To run clone this repository, pip install -r requirements.txt, python main.py
