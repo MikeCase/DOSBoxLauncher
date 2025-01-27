@@ -4,3 +4,5 @@ games.json
 *.ui~
 *.ui#
 *.cmb
+id_extraction_test.py
+widget_loader.py

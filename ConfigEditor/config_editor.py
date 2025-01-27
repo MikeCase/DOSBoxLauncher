@@ -9,11 +9,19 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk # type: ignore
 
 class ConfigEditor(Gtk.Window):
-    def __init__(self, parent, game = None):
+    def __init__(self, parent, game = None) -> None:
         """ Main entry point for the ConfigEditor """
         super().__init__(title="DOSBox Config Editor", transient_for=parent)
         self.config = DOSBoxConfigParser()
         self.parent = parent
+        self.game_opts = game
+
+        self.setup_ui()
+        self.load_game_config()
+        self.cfg_values = load_config(self.config)
+        self.update_ui()
+
+    def setup_ui(self):
         # Load the editor UI
         builder = Gtk.Builder()
         builder.add_from_file("UI/config_options.ui")
@@ -21,169 +29,107 @@ class ConfigEditor(Gtk.Window):
         # Get the window object from the builder
         self.opts_window = builder.get_object("OptsWindow")
 
-        self.game_opts = game
-        self.load_game_config()
-        # pprint(get_config_file_values(self.config))
-        self.cfg_values = load_config(self.config)
 
         # Not yet sure if I want to map all the buffers.
         self.autoexec_buffer = builder.get_object("autoexec_tbuffer")
-        self.serial1_buffer = builder.get_object("serial1_entry_buffer")
-        self.serial2_buffer = builder.get_object("serial2_entry_buffer")
-        self.serial3_buffer = builder.get_object("serial3_entry_buffer")
-        self.serial4_buffer = builder.get_object("serial4_entry_buffer")
+        self.serial_buffers = {
+            'serial1': builder.get_object("serial1_entry_buffer"),
+            'serial2': builder.get_object("serial2_entry_buffer"),
+            'serial3': builder.get_object("serial3_entry_buffer"),
+            'serial4': builder.get_object("serial4_entry_buffer"),
+        }
 
-
-        # Trying to keep the widgets tidy since there's a lot of them. 
-        # Should make it easier to use them in code as well. 
-        self.sdl_widgets = {
-            'fullscreen_sw': builder.get_object("fullscreen_sw"),
-            "fulldouble_sw": builder.get_object("fulldouble_sw"),
-            "full_resolution_cbox": builder.get_object("full_resolution_cbox"),
-            "wind_res_cbox": builder.get_object("wind_res_cbox"),
-            "output_cbox": builder.get_object("output_cbox"),
-            "autolock_sw": builder.get_object("autolock_sw"),
-            "sensitivity_spin": builder.get_object("sensitivity_spin"),
-            "wait_on_error_sw": builder.get_object("wait_on_error_sw"),
-            "priority_cbox": builder.get_object("priority_cbox"),
-            "mapper_file_entry": builder.get_object("mapper_file_entry"),
-            "use_scan_codes_sw": builder.get_object("use_scan_codes_sw"),
-        }
-        self.dosbox_widgets = {
-            'language_entry': builder.get_object("language_entry"),
-            'memsize_spin': builder.get_object('memsize_spin'),
-            'machine_cbox': builder.get_object('machine_cbox'),
-            'captures_entry': builder.get_object('captures_entry')
-        }
-        self.render_widgets = {
-            'frameskip_spin': builder.get_object('frameskip_spin'),
-            'aspect_sw': builder.get_object('aspect_sw'),
-            'scaler_cbox': builder.get_object('scaler_cbox'),
-        }
-        self.cpu_widgets = {
-            'core_cbox': builder.get_object('core_cbox'),
-            'cpu_type_cbox': builder.get_object('cpu_type_cbox'),
-            'cycles_cbox': builder.get_object('cycles_cbox'),
-            'cycle_up_spin': builder.get_object('cycle_up_spin'),
-            'cycle_down_spin': builder.get_object('cycle_down_spin'),
-        }
-        self.serial_widgets = {
-            'serial1_cbox': builder.get_object('serial1_cbox'),
-            'serial2_cbox': builder.get_object('serial2_cbox'),
-            'serial3_cbox': builder.get_object('serial3_cbox'),
-            'serial4_cbox': builder.get_object('serial4_cbox'),
-        }
-        self.dos_widgets = {
-            'xms_sw': builder.get_object('xms_sw'),
-            'ems_sw': builder.get_object('ems_sw'),
-            'umb_sw': builder.get_object('umb_sw'),
-            'keyboard_layout_cbox': builder.get_object('keyboard_layout_cbox'),
-        }
-        self.ipx_widgets = {
-            'ipx_sw': builder.get_object('ipx_sw'),
-        }
-        self.autoexec_widgets = {
-            'autoexec_tbox': builder.get_object('autoexec_tbox'),
-        }
         self.widgets = {
-            "sdl": self.sdl_widgets, 
-            "dosbox": self.dosbox_widgets,
-            "render": self.render_widgets,
-            "cpu": self.cpu_widgets,
-            "serial": self.serial_widgets,
-            "dos": self.dos_widgets, 
-            "ipx": self.ipx_widgets,
-            "autoexec": self.autoexec_widgets,
+            "sdl": self._get_widgets(builder, [
+                'fullscreen_sw', 'fulldouble_sw', 'full_resolution_cbox', 'wind_res_cbox', 'output_cbox', 'autolock_sw',
+                'sensitivity_spin', 'wait_on_error_sw', 'priority_cbox', 'mapper_file_entry', 'use_scan_codes_sw']),
+            "dosbox": self._get_widgets(builder, ['language_entry', 'memsize_spin', 'machine_cbox', 'captures_entry']),
+            "render": self._get_widgets(builder, ['frameskip_spin', 'aspect_sw', 'scaler_cbox']),
+            "cpu": self._get_widgets(builder, ['core_cbox', 'cpu_type_cbox', 'cycles_cbox', 'cycle_up_spin', 'cycle_down_spin']),
+            "serial": self._get_widgets(builder, ['serial1_cbox', 'serial2_cbox', 'serial3_cbox', 'serial4_cbox']),
+            "dos": self._get_widgets(builder, ['xms_sw', 'ems_sw', 'umb_sw', 'keyboard_layout_cbox']),
+            "ipx": self._get_widgets(builder, ['ipx_sw']),
+            "autoexec": self._get_widgets(builder, ['autoexec_tbox']),
         }
 
-        save_btn = builder.get_object("save_config_btn")
-        reload_btn = builder.get_object("reload_config_btn")
-        cancel_btn = builder.get_object("cancel_btn")
-        remove_config_btn = builder.get_object("remove_config_btn")
-
-        save_btn.connect('clicked', self.save_config)
-        reload_btn.connect('clicked', self.do_reload_config)
-        cancel_btn.connect('clicked', self.close_window)
-        remove_config_btn.connect('clicked', self.do_remove_config, parent)
-
-        # Update all ui values with values from the config file.
-        self.update_ui()
-
+        
+        self._connect_buttons(builder)
         self.opts_window.show()
 
-    def close_window(self, hWnd):
+    def _get_widgets(self, builder, widget_names):
+        """ Helper function to get the widgets in each section of the UI.
+            
+            Args:
+                builder: Builder object for the Gtk.Window
+                widget_names: List of the names of all the widgets in the window. 
+        """
+        return {name: builder.get_object(name) for name in widget_names}
+
+    def _connect_buttons(self, builder):
+        """ Helper function to connect all the buttons of the window to their signals
+            
+            Args:
+                builder: Builder object for window.
+        """
+        buttons = {
+            "save_config_btn": self.save_config,
+            "reload_config_btn": self.do_reload_config,
+            "cancel_btn": self.close_window,
+            "remove_config_btn": lambda btn: self.do_remove_config(btn, self.parent),
+        }
+        for btn_name, handler in buttons.items():
+            btn = builder.get_object(btn_name)
+            btn.connect('clicked', handler)
+
+    def close_window(self, hWnd) -> None:
+        """Closes the window
+
+        Args:
+            hWnd (_type_): The window that shall be closed.
+        """
         self.opts_window.destroy()
 
     def save_config(self, button=None):
-        # Mapping of UI widget names to DOSBox config keys
         key_mapping = KEY_MAPPINGS
+        widget_handlers = {
+            Gtk.Switch: lambda w: str(w.get_active()).lower(),
+            Gtk.ComboBoxText: lambda w: w.get_active_text(),
+            Gtk.SpinButton: lambda w: str(w.get_value_as_int()),
+            Gtk.TextView: lambda w: w.get_buffer().get_text(w.get_buffer().get_start_iter(), w.get_buffer().get_end_iter(), True),
+            Gtk.Entry: lambda w: w.get_text(),
+        }
 
-        # Iterate over each category of widgets
-        for key, widget_group in self.widgets.items():
-            for field, widget in widget_group.items():
+        for key, widgets in self.widgets.items():
+            for field, widget in widgets.items():
+                if field in key_mapping:
+                    dosbox_key = key_mapping[field]
+                    handler = widget_handlers.get(type(widget))
+                    if handler:
+                        value = handler(widget)
+                        if value:
+                            self.config[key][dosbox_key] = value
 
-                # Check if the field has a corresponding DOSBox key
-                if field not in key_mapping:
-                    continue
+        self._remove_empty_sections()
+        self._write_config()
 
-                # Get the corresponding DOSBox key
-                dosbox_key = key_mapping[field]
+    def _remove_empty_sections(self):
+        for section in list(self.config.sections()):
+            if not self.config[section]:
+                self.config.remove_section(section)
 
-                # Read the value from the widget and update the config
-                if isinstance(widget, Gtk.Switch):  # GtkSwitch
-                    value = widget.get_active()
-                    self.config[key][dosbox_key] = str(value).lower()  # Convert boolean to 'true'/'false'
-                
-                elif isinstance(widget, Gtk.ComboBoxText):  # GtkComboBoxText
-                    active_text = widget.get_active_text()
-                    if active_text:
-                        self.config[key][dosbox_key] = active_text
-                
-                elif isinstance(widget, Gtk.SpinButton):  # GtkSpinButton
-                    value = widget.get_value_as_int()
-                    self.config[key][dosbox_key] = str(value)
-                
-                elif isinstance(widget, Gtk.TextView):  # GtkTextView (e.g., autoexec)
-                    buffer = widget.get_buffer()
-                    start_iter = buffer.get_start_iter()
-                    end_iter = buffer.get_end_iter()
-                    text = buffer.get_text(start_iter, end_iter, True)
-
-                    # Handle the autoexec section differently to prevent duplicate sections
-                    if dosbox_key == "autoexec":
-                        if text.strip():  # Only update if there's content
-                            if self.config.has_section(dosbox_key):
-                                self.config.set_raw_section(dosbox_key, text)
-                            else:
-                                self.config.add_section(dosbox_key)
-                                self.config.set_raw_section(dosbox_key, text)
-
-                elif type(widget) is Gtk.Entry:  # GtkEntry
-                    value = widget.get_text()
-                    self.config[key][dosbox_key] = value
-
-        # Now, we handle removing sections that have no key-value pairs
-        sections_to_remove = []
-        for section in self.config.sections():
-            # If a section has no key-value pairs, we mark it for removal
-            if not self.config[section]:  # Check if section is empty
-                sections_to_remove.append(section)
-
-        # Remove the empty sections
-        for section in sections_to_remove:
-            self.config.remove_section(section)
-
-        # Write the updated configuration to the file
+    def _write_config(self):
         config_file_path = self.get_file_path()
-
-        # Open the config file and write the updated configuration
         with open(config_file_path, "w") as config_file:
             self.config.write(config_file)
-
         print(f"Configuration saved to {config_file_path}")
 
-
     def do_reload_config(self, button=None):
+        """Helper function to reload the default config when the button is pressed.
+
+        Args:
+            button (Gtk.Widget, optional): The button pressed to call this method. Defaults to None.
+        """
+
         self.create_config(self.get_file_path())
         self.load_game_config()
         self.cfg_values = load_config(self.config)
@@ -197,12 +143,12 @@ class ConfigEditor(Gtk.Window):
         else:
             print("No game found")
 
-    def do_remove_config(self, button, parent):
-        """ Remove config and game listing
+    def do_remove_config(self, button, parent) -> None:
+        """Remove the config file.
 
-            Parameters: button, parent
-                - button: The button element that called this method
-                - parent: The parent of this window.
+        Args:
+            button (_type_): _description_
+            parent (_type_): _description_
         """
         cf = self.get_file_path()
         directory_path, _ = os.path.split(cf)
@@ -265,43 +211,24 @@ class ConfigEditor(Gtk.Window):
     def update_ui(self):
         """ Update the UI """
         cbox_mappings = ComboBoxMappings()
+        widget_handlers = {
+            Gtk.Switch: lambda w, v: w.set_active(v),
+            Gtk.ComboBoxText: lambda w, v, m: w.set_active(m.index(v) if v in m else -1),
+            Gtk.SpinButton: lambda w, v: w.set_value(v),
+            Gtk.TextView: lambda w, v: self.autoexec_buffer.set_text(v),
+            Gtk.Entry: lambda w, v: w.set_text(v),
+        }
 
-        for key, val in self.widgets.items():
-            for field, widget in val.items():
-                section = getattr(self.cfg_values, key)  # Get the section object (e.g., SDLConfig, RenderConfig)
-                
-                
-                # Use getattr to fetch the value for the specific field in that section
-                
-                value = getattr(section, field, None)  # Default to None if the field doesn't exist
-
-                ## GtkSwitch
-                if isinstance(widget, Gtk.Switch):
-                    if value is not None:
-                        widget.set_active(value)
-
-                ## GtkComboBoxText
-                if isinstance(widget, Gtk.ComboBoxText):
-                    value_list = getattr(cbox_mappings, field, [])
-                    if value is not None and value in value_list:
-                        widget.set_active(value_list.index(value))
+        for key, widgets in self.widgets.items():
+            section = getattr(self.cfg_values, key)
+            for field, widget in widgets.items():
+                value = getattr(section, field, None)
+                handler = widget_handlers.get(type(widget))
+                if handler:
+                    if isinstance(widget, Gtk.ComboBoxText):
+                        handler(widget, value, getattr(cbox_mappings, field, []))
                     else:
-                        widget.set_active(-1)
-
-                ## GtkSpinButton
-                if isinstance(widget, Gtk.SpinButton):
-                    if value is not None:
-                        widget.set_value(value)
-
-                ## GtkTextView
-                if isinstance(widget, Gtk.TextView):
-                    if value is not None:
-                        self.autoexec_buffer.set_text(value)
-
-                ## GtkEntry
-                if type(widget) is Gtk.Entry:
-                    if value is not None:
-                        widget.set_text(value)
+                        handler(widget, value)
 
                     
                     
