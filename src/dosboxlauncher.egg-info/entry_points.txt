@@ -1,0 +1,2 @@
+[console_scripts]
+dosboxlauncher = dosboxlauncher.__main__:main

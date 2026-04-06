@@ -1,0 +1,30 @@
+Metadata-Version: 2.4
+Name: dosboxlauncher
+Version: 0.1.0
+Summary: A GUI for managing and launching DOS games with DOSBox
+Author: DOSBoxLauncher
+License: MIT
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: X11 Applications :: GTK
+Classifier: Intended Audience :: End Users/Desktop
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Games/Entertainment :: Emulators
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: PyGObject<3.50.0,>=3.44.0
+Requires-Dist: pycairo>=1.27.0
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: platformdirs>=4.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.10; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Dynamic: license-file
+
+To run clone this repository, pip install -r requirements.txt, python main.py
