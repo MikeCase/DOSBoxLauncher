@@ -4,8 +4,6 @@ A small GTK3 desktop app for managing DOS games and launching them with DOSBox.
 
 ## Screenshot
 
-If you add your screenshot at `docs/screenshot.png`, GitHub will render it here.
-
 ![DOSBox Launcher Screenshot](docs/screenshot.png)
 
 ## Features
