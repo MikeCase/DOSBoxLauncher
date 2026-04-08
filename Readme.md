@@ -20,6 +20,21 @@ Personal project, Linux-focused, and intended primarily for source checkout usag
 
 This repository is set up to be easy to clone and run locally rather than being heavily packaged for distribution.
 
+## Code Authorship
+
+This project is a collaboration. Roughly:
+
+| | Lines | Percentage |
+|---|---|---|
+| Original (core app, UI, docs) | ~4,589 | ~68% |
+| Added by AI assistant (tests) | ~2,195 | ~32% |
+| **Total** | **~6,784** | **100%** |
+
+The original application and design were created by the user. The AI assistant added
+tests, consolidated the config editor tabs, added expandable sound sections (Mixer, MIDI,
+Speaker, GUS), wired double-click game launching, added tooltips, improved UI clarity,
+and wrote the README.
+
 ## Requirements
 
 Linux desktop with:
