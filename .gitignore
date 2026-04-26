@@ -1,5 +1,6 @@
 games.json
 .vscode/
+.env
 *.pyc
 *.ui~
 *.ui#
