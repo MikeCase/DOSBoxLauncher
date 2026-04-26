@@ -7,3 +7,12 @@ games.json
 *.cmb
 id_extraction_test.py
 widget_loader.py
+.graymatter/
+entities.json
+mempalace.yaml
+AGENTS.md
+__pycache__
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
